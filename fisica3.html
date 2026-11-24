@@ -12,17 +12,12 @@
   <div class="abas" id="abas"></div>
 </div>
 <main id="main"></main>
-<div style="max-width:1100px;margin:0 auto;padding:0 14px">
-  <div class="kahoot">
-    <h2>🎮 Desafio Kahoot · Física 3º ano</h2>
-    <p style="margin:0 0 10px">Depois de explorar os simuladores, é hora de competir! Quando o professor abrir o jogo na tela, entre no Kahoot e digite o PIN do jogo.</p>
-    <a class="bt" href="https://kahoot.it" target="_blank" rel="noopener">Entrar no jogo (kahoot.it)</a>
-    <a class="bt" href="https://create.kahoot.it/details/d206c16d-6b37-4eb6-91d8-d710fca15b80" target="_blank" rel="noopener" style="background:transparent;color:#fff;border:1.5px solid #fff">Professor: abrir o Kahoot</a>
-  </div>
-</div>
 <footer>Prof. João Victor Mariano de Almeida · @experimentajoao</footer>
 <script src="plataforma.js"></script>
 <script>
+/* Link do desafio Kahoot no modo Atribuir (cole entre as aspas) */
+var KAHOOT_DESAFIO = '';
+
 var C = 3e8, H = 6.6e-34, EV = 1.6e-19;
 function modos(c, lista, inicial, on) {
   var caixas = {};
@@ -372,6 +367,7 @@ P.pagina([
       { p: '80 g de material com meia-vida de 5 dias. Quanto resta após 15 dias?', a: ['40 g', '20 g', '10 g'], c: 2, e: '15 dias = 3 meias-vidas: 80 → 40 → 20 → 10 g.' }
     ]);
     return f; } },
+  { id: 'desafio', nome: '🎮 Arena Final', titulo: 'Arena Final: o último desafio', init: P.desafio('3º ano', KAHOOT_DESAFIO) },
   { id: 'certificado', nome: '🏅 Certificado', titulo: 'Certificado de conclusão', intro: 'Depois de concluir todas as lições, digite seu nome e baixe seu certificado com as notas.', init: P.certificado('3º ano') }
 ]);
 </script>

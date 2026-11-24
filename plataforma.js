@@ -62,6 +62,7 @@ var P = (function () {
     var box = el('div', 'card perg'); box.appendChild(el('h3', '', 'Perguntas rápidas'));
     box.appendChild(el('p', 'dica', 'Responda todas e depois toque em Conferir. Se errar alguma, volte ao simulador, teste de novo e corrija.'));
     var marc = [], blocos = [], fbs = [];
+    lista.forEach(function (q) { banco.push({ q: q, lic: licaoAtual }); });
     lista.forEach(function (q, qi) {
       var d = el('div', 'q'); d.appendChild(el('p', '', (qi + 1) + '. ' + q.p));
       var fb = el('div', 'fb');
@@ -180,10 +181,140 @@ var P = (function () {
     window.scrollTo(0, 0);
   }
 
+
+  /* ===================== DESAFIO FINAL GAMIFICADO ===================== */
+  var banco = [];
+  var FRASES = ['Cientista não desiste: testa de novo!', 'Cada erro é um experimento que ensinou algo.', 'Newton também começou do zero. Bora!', 'A Física está em tudo, e agora está em você!', 'Mais uma fase e você vira lenda!', 'Curiosidade é o seu superpoder.', 'O universo tem regras. Você está descobrindo todas!'];
+  function nivel(xp, max) {
+    var nv = [[0, 'Aprendiz de Laboratório', '🧪'], [0.3 * max, 'Explorador de Fenômenos', '🔭'], [0.6 * max, 'Cientista em Ação', '⚛️'], [0.85 * max, 'Mestre da Física', '🏆']];
+    var r = nv[0]; nv.forEach(function (x) { if (xp >= x[0]) r = x; }); return r;
+  }
+  function desafio(serie, link) {
+    return function (a) {
+      /* garante que todas as lições carreguem suas perguntas para o desafio relâmpago */
+      sims.forEach(function (s) { if (!s._ok && s.id !== 'desafio' && s.id !== 'certificado') { s._ok = true; var la = licaoAtual; licaoAtual = s.id; var f = s.init(s._areas); if (f) quadros[s.id] = f; licaoAtual = la; } });
+      var licoes = sims.filter(function (s) { return s.id !== 'certificado' && s.id !== 'desafio'; });
+      var E = a.tela, D = a.ctrl; E.classList.add('arena'); D.classList.add('arena2');
+      var titulo = el('h2', '', '🎮 Arena Final · Física ' + serie); E.appendChild(titulo);
+      var frase = el('p', 'frase'); E.appendChild(frase);
+      var mapa = el('div', 'mapa'); E.appendChild(mapa);
+      /* desafio relâmpago */
+      var rel = el('div', 'relampago'); E.appendChild(rel);
+      /* perfil */
+      var perfil = el('div', 'perfil'); D.appendChild(perfil);
+      var conq = el('div', 'conquistas'); D.appendChild(conq);
+      var missao = el('div', 'missao'); D.appendChild(missao);
+      var fi = Math.floor(Math.random() * FRASES.length);
+      setInterval(function () { fi = (fi + 1) % FRASES.length; frase.textContent = '💬 ' + FRASES[fi]; }, 6000);
+      frase.textContent = '💬 ' + FRASES[fi];
+      function estado() {
+        var pr = lerProg(), xp = 0, feitas = 0, perfeitas = 0, persist = 0;
+        var d = licoes.map(function (s) { var r = pr[s.id] || {}; if (r.ok) { feitas++; xp += Math.round(r.nota * 100); if (r.nota === 10) perfeitas++; if (r.tent > 1) persist++; } return { s: s, r: r }; });
+        var rl = pr._relampago || {};
+        xp += (rl.melhor || 0) * 20;
+        return { d: d, xp: xp, feitas: feitas, perfeitas: perfeitas, persist: persist, rl: rl, pr: pr };
+      }
+      function desenha() {
+        var st = estado(), tot = licoes.length, nv = nivel(st.xp, tot * 1000 + 100);
+        mapa.innerHTML = '';
+        st.d.forEach(function (x, i) {
+          var f = el('div', 'fase ' + (x.r.ok ? 'ok' : 'nao'));
+          var ic = el('div', 'bola', x.r.ok ? (x.r.nota === 10 ? '⭐' : '✔') : String(i + 1));
+          f.appendChild(ic); f.appendChild(el('small', '', x.s.nome));
+          f.appendChild(el('b', '', x.r.ok ? '+' + Math.round(x.r.nota * 100) + ' XP' : 'jogar'));
+          f.onclick = function () { abrir(x.s.id); };
+          mapa.appendChild(f);
+          if (i < st.d.length - 1) mapa.appendChild(el('div', 'trilha' + (x.r.ok ? ' ok' : '')));
+        });
+        perfil.innerHTML = '';
+        perfil.appendChild(el('div', 'nivel', nv[2] + ' ' + nv[1]));
+        perfil.appendChild(el('div', 'xp', st.xp + ' XP'));
+        var barra = el('div', 'barraxp'), ib = el('i'); ib.style.width = Math.min(100, st.feitas / tot * 100) + '%'; barra.appendChild(ib); perfil.appendChild(barra);
+        perfil.appendChild(el('small', '', st.feitas + ' de ' + tot + ' fases concluídas' + (st.feitas === tot ? ' · Missão final liberada!' : '')));
+        conq.innerHTML = ''; conq.appendChild(el('h3', '', 'Conquistas'));
+        [['🚀', 'Primeira fase', st.feitas >= 1], ['💯', 'Gabaritou de primeira', st.perfeitas >= 1], ['🧠', 'Persistente (errou e corrigiu)', st.persist >= 1], ['⚡', 'Relâmpago perfeito (5/5)', (st.rl.melhor || 0) >= 5], ['🌟', 'Todas as fases', st.feitas === tot], ['👑', 'Mestre (média 9 ou mais)', st.feitas === tot && st.xp - (st.rl.melhor || 0) * 20 >= 900 * tot]].forEach(function (c) {
+          var b = el('div', 'selo ' + (c[2] ? 'on' : '')); b.appendChild(el('span', '', c[0])); b.appendChild(el('small', '', c[1])); conq.appendChild(b);
+        });
+        missao.innerHTML = ''; missao.appendChild(el('h3', '', '👾 Missão final: Desafio Kahoot'));
+        if (st.feitas < tot) missao.appendChild(el('p', '', '🔒 Conclua todas as fases para liberar a missão final. Faltam ' + (tot - st.feitas) + '!'));
+        else if (!link) missao.appendChild(el('p', '', '⏳ Missão liberada! O professor vai publicar o link do desafio em breve.'));
+        else {
+          missao.appendChild(el('p', '', 'Você chegou ao chefão! Abra o desafio, use o mesmo nome do certificado e responda no seu ritmo. Quanto mais rápido e certo, mais pontos!'));
+          var bk = el('a', 'bt', '⚔️ Enfrentar o chefão (Kahoot)'); bk.href = link; bk.target = '_blank'; bk.rel = 'noopener'; missao.appendChild(bk);
+        }
+        missao.appendChild(el('p', 'dica', 'Depois da missão, pegue seu certificado na próxima aba. 🏅'));
+        if (st.feitas === tot && !E._festa) { E._festa = true; confete(E); }
+      }
+      /* ---- relâmpago: 5 perguntas sorteadas, 15 s cada, combo ---- */
+      function telaRel() {
+        var pr = lerProg(), rl = pr._relampago || {};
+        rel.innerHTML = '';
+        rel.appendChild(el('h3', '', '⚡ Desafio Relâmpago'));
+        rel.appendChild(el('p', '', 'Até 5 perguntas sorteadas das fases que você já concluiu, 15 segundos cada. Acertos seguidos fazem combo! Recorde: ' + (rl.melhor || 0) + '/5'));
+        var b = el('button', 'bt', '▶ Começar'); b.type = 'button'; b.onclick = jogar; rel.appendChild(b);
+      }
+      function jogar() {
+        var prg = lerProg(), disp = banco.filter(function (b) { return prg[b.lic] && prg[b.lic].ok; }).map(function (b) { return b.q; });
+        if (!disp.length) { rel.innerHTML = ''; rel.appendChild(el('h3', '', '⚡ Desafio Relâmpago')); rel.appendChild(el('p', '', '🔒 Conclua pelo menos uma fase para liberar o Relâmpago!')); var bb = el('button', 'bt', 'Tentar de novo'); bb.type = 'button'; bb.onclick = jogar; rel.appendChild(bb); return; }
+        var N = Math.min(5, disp.length), qs = disp.sort(function () { return Math.random() - 0.5; }).slice(0, N), i = 0, pts = 0, acertos = 0, combo = 0, timer = null;
+        function prox() {
+          if (i >= qs.length) return fim();
+          var q = qs[i], t0 = Date.now();
+          rel.innerHTML = '';
+          var top = el('div', 'reltopo'); top.appendChild(el('span', '', 'Pergunta ' + (i + 1) + '/' + N)); top.appendChild(el('span', '', '🔥 Combo x' + (combo + 1))); top.appendChild(el('span', '', pts + ' pts')); rel.appendChild(top);
+          var bar = el('div', 'tempo'), bi = el('i'); bar.appendChild(bi); rel.appendChild(bar);
+          rel.appendChild(el('p', 'relq', q.p));
+          var travado = false;
+          q.a.forEach(function (alt, k) {
+            var bt = el('button', 'relalt', alt); bt.type = 'button';
+            bt.onclick = function () {
+              if (travado) return; travado = true; clearInterval(timer);
+              var ok = k === q.c;
+              bt.classList.add(ok ? 'certo' : 'errado');
+              if (ok) { acertos++; combo++; pts += Math.round((100 + Math.max(0, 15 - (Date.now() - t0) / 1000) * 10) * combo); }
+              else combo = 0;
+              var fb = el('p', 'relfb', ok ? ['Boa! 🎯', 'Mandou bem! ⚡', 'Isso aí, cientista! 🧠', 'Na mosca! 🚀'][acertos % 4] : 'Quase! Bora para a próxima 💪');
+              rel.appendChild(fb);
+              setTimeout(function () { i++; prox(); }, 1100);
+            };
+            rel.appendChild(bt);
+          });
+          timer = setInterval(function () {
+            var r = 1 - (Date.now() - t0) / 15000; bi.style.width = Math.max(0, r * 100) + '%';
+            if (r <= 0 && !travado) { travado = true; clearInterval(timer); combo = 0; rel.appendChild(el('p', 'relfb', '⏰ Tempo esgotado!')); setTimeout(function () { i++; prox(); }, 1000); }
+          }, 100);
+        }
+        function fim() {
+          var pr = lerProg(), rl = pr._relampago || {}, rec = acertos > (rl.melhor || 0);
+          if (rec) { rl.melhor = acertos; pr._relampago = rl; gravarProg(pr); }
+          rel.innerHTML = '';
+          rel.appendChild(el('h3', '', acertos === 5 ? '⚡ PERFEITO! 5/5' : acertos >= 3 ? '🔥 Mandou bem: ' + acertos + '/' + N : '💪 ' + acertos + '/' + N + ', dá para melhorar!'));
+          rel.appendChild(el('p', '', pts + ' pontos' + (rec ? ' · Novo recorde! (+XP)' : '')));
+          rel.appendChild(el('p', '', acertos === 5 ? 'Você está voando! Agora encare o chefão. 👾' : 'Volte às fases, revise os simuladores e tente de novo!'));
+          var b = el('button', 'bt', '↺ Jogar de novo'); b.type = 'button'; b.onclick = jogar; rel.appendChild(b);
+          if (acertos === 5) confete(rel);
+          desenha();
+        }
+        prox();
+      }
+      telaRel();
+      var ult = '';
+      return function () { var k = JSON.stringify(lerProg()); if (k !== ult) { ult = k; desenha(); } };
+    };
+  }
+  function confete(alvo) {
+    var cores = ['#ffd54a', '#ff6b6b', '#4dd4ac', '#5aa9ff', '#c58bff'];
+    for (var i = 0; i < 60; i++) {
+      var c = el('i', 'confete'); c.style.left = Math.random() * 100 + '%'; c.style.background = cores[i % 5];
+      c.style.animationDelay = Math.random() * 0.8 + 's'; c.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
+      alvo.appendChild(c); (function (c) { setTimeout(function () { c.remove(); }, 3500); })(c);
+    }
+  }
+
   /* ===================== CERTIFICADO ===================== */
   function certificado(serie) {
     return function (a) {
-      var licoes = sims.filter(function (s) { return s.id !== 'certificado'; });
+      var licoes = sims.filter(function (s) { return s.id !== 'certificado' && s.id !== 'desafio'; });
       var T = tela(a.tela, 1600, 1130), ctx = T.ctx, c = a.ctrl;
       c.appendChild(el('h3', '', 'Seu certificado'));
       dica(c, 'Conclua as Perguntas rápidas de todas as lições. A nota de cada lição é a da primeira vez que você conferiu as respostas.');
@@ -278,6 +409,6 @@ var P = (function () {
       return function () { var k = JSON.stringify(lerProg()); if (k !== ult) { ult = k; desenha(); } };
     };
   }
-  return { certificado: certificado, fmt: fmt, sci: sci, el: el, slider: slider, seg: seg, leituras: leituras, formula: formula, dica: dica,
+  return { desafio: desafio, certificado: certificado, fmt: fmt, sci: sci, el: el, slider: slider, seg: seg, leituras: leituras, formula: formula, dica: dica,
            perguntas: perguntas, tela: tela, seta: seta, texto: texto, pagina: pagina };
 })();
