@@ -53,6 +53,10 @@ var P = (function () {
   }
   function formula(pai, html) { var f = el('div', 'formula'); f.innerHTML = html; pai.appendChild(f); return f; }
   function dica(pai, t) { var d = el('p', 'dica', t); pai.appendChild(d); return d; }
+  /* Progresso do aluno (fica salvo no aparelho) */
+  var CHAVE = 'provinha_' + location.pathname.split('/').pop().replace('.html', '');
+  function lerProg() { try { return JSON.parse(localStorage.getItem(CHAVE) || '{}'); } catch (e) { return {}; } }
+  function gravarProg(p) { try { localStorage.setItem(CHAVE, JSON.stringify(p)); } catch (e) {} }
   /* Perguntas: o aluno marca tudo, confere no final; só vê as explicações quando acertar todas */
   function perguntas(pai, lista) {
     var box = el('div', 'card perg'); box.appendChild(el('h3', '', 'Perguntas rápidas'));
@@ -77,21 +81,30 @@ var P = (function () {
     var res = el('div', 'resultado');
     box.appendChild(conf); box.appendChild(res);
     function atualiza() { var n = lista.filter(function (q, i) { return marc[i] !== undefined; }).length; conf.disabled = n < lista.length; conf.textContent = n < lista.length ? 'Conferir respostas (' + n + ' de ' + lista.length + ' marcadas)' : 'Conferir respostas'; }
+    var id = licaoAtual;
+    var pr = lerProg();
+    if (pr[id] && pr[id].ok) { lista.forEach(function (q, i) { marc[i] = q.c; blocos[i].querySelectorAll('button')[q.c].classList.add('marcado'); }); }
     conf.onclick = function () {
       var erros = 0;
       lista.forEach(function (q, i) { var ok = marc[i] === q.c; blocos[i].classList.toggle('qerro', !ok); if (!ok) erros++; });
+      var pg = lerProg(), r = pg[id] || { tent: 0 };
+      if (!r.ok) r.tent = (r.tent || 0) + 1;
+      if (r.nota === undefined) r.nota = Math.round((lista.length - erros) / lista.length * 100) / 10;
+      if (!erros) r.ok = true;
+      pg[id] = r; gravarProg(pg);
       if (erros) {
         res.className = 'resultado ruim';
         res.textContent = 'Você acertou ' + (lista.length - erros) + ' de ' + lista.length + '. As perguntas marcadas em vermelho estão erradas: volte ao simulador, teste e responda de novo.';
       } else {
         res.className = 'resultado bom';
-        res.textContent = 'Parabéns! Todas certas. Veja as explicações abaixo de cada pergunta.';
+        res.textContent = 'Parabéns! Lição concluída. Nota da lição (1ª tentativa): ' + fmt(r.nota, 1).replace(/^(\d+)$/, '$1,0') + '. Veja as explicações abaixo.';
         box.classList.add('feito'); conf.style.display = 'none';
         lista.forEach(function (q, i) { blocos[i].querySelectorAll('button')[q.c].classList.add('certo'); fbs[i].textContent = q.e; fbs[i].style.color = 'var(--ok)'; fbs[i].classList.add('mostra'); });
       }
     };
     atualiza();
     pai.appendChild(box);
+    if (pr[id] && pr[id].ok) conf.onclick();
   }
   /* Canvas com coordenadas lógicas fixas (L x A), ajustado à largura da tela */
   function tela(pai, L, A) {
@@ -127,7 +140,7 @@ var P = (function () {
     ctx.fillText(t, x, y);
   }
   /* Monta a página: abas, uma seção por simulador, animação só do simulador aberto */
-  var sims = [], ativo = null, quadros = {};
+  var sims = [], ativo = null, quadros = {}, licaoAtual = null;
   function pagina(lista) {
     var abas = document.getElementById('abas'), main = document.getElementById('main');
     lista.forEach(function (s, i) {
@@ -159,13 +172,112 @@ var P = (function () {
     sims.forEach(function (s) {
       var on = s.id === id;
       s._bt.classList.toggle('on', on); s._sec.classList.toggle('on', on);
-      if (on && !s._ok) { s._ok = true; var f = s.init(s._areas); if (f) quadros[s.id] = f; }
+      if (on && !s._ok) { s._ok = true; licaoAtual = s.id; var f = s.init(s._areas); if (f) quadros[s.id] = f; }
       if (on) s._bt.scrollIntoView({ block: 'nearest', inline: 'center' });
     });
     ativo = id;
     if (history.replaceState) history.replaceState(null, '', '#' + id);
     window.scrollTo(0, 0);
   }
-  return { fmt: fmt, sci: sci, el: el, slider: slider, seg: seg, leituras: leituras, formula: formula, dica: dica,
+
+  /* ===================== CERTIFICADO ===================== */
+  function certificado(serie) {
+    return function (a) {
+      var licoes = sims.filter(function (s) { return s.id !== 'certificado'; });
+      var T = tela(a.tela, 1600, 1130), ctx = T.ctx, c = a.ctrl;
+      c.appendChild(el('h3', '', 'Seu certificado'));
+      dica(c, 'Conclua as Perguntas rápidas de todas as lições. A nota de cada lição é a da primeira vez que você conferiu as respostas.');
+      var rot = el('div', 'segrot', 'Nome completo do aluno (ou da dupla)'); c.appendChild(rot);
+      var nome = el('input'); nome.placeholder = 'Ex.: Maria Souza e João Lima'; nome.maxLength = 70; c.appendChild(nome);
+      var lista = el('div', 'leit'); c.appendChild(lista);
+      var aviso = el('div', 'resultado'); c.appendChild(aviso);
+      var bx = el('button', 'bt', '⬇ Baixar certificado (imagem)'); bx.type = 'button'; c.appendChild(bx);
+      try { nome.value = localStorage.getItem('provinha_nome') || ''; } catch (e) {}
+      nome.addEventListener('input', function () { try { localStorage.setItem('provinha_nome', nome.value); } catch (e) {} desenha(); });
+      function dados() {
+        var pr = lerProg();
+        return licoes.map(function (s) { var r = pr[s.id] || {}; return { nome: s.nome, ok: !!r.ok, nota: r.nota, tent: r.tent || 0 }; });
+      }
+      function nt(v) { var t = fmt(v, 1); return t.indexOf(',') < 0 ? t + ',0' : t; }
+      function painel() {
+        var d = dados(), feitas = d.filter(function (x) { return x.ok; }).length;
+        lista.innerHTML = '';
+        d.forEach(function (x) { var cc = el('div'); cc.appendChild(el('small', '', x.nome)); cc.appendChild(el('b', '', x.ok ? 'Nota ' + nt(x.nota) : 'Pendente')); if (!x.ok) cc.style.background = 'var(--badbg)'; lista.appendChild(cc); });
+        var pronto = feitas === d.length && nome.value.trim().length >= 3;
+        aviso.className = 'resultado ' + (pronto ? 'bom' : 'ruim');
+        aviso.textContent = feitas < d.length ? 'Faltam ' + (d.length - feitas) + ' lição(ões) para liberar o certificado.' : nome.value.trim().length < 3 ? 'Digite seu nome para liberar o certificado.' : 'Certificado liberado! Baixe e mostre ao professor.';
+        bx.disabled = !pronto; bx.style.opacity = pronto ? 1 : 0.5;
+        return { d: d, pronto: pronto };
+      }
+      function estrelas(n) { var k = Math.round(n / 2); return '★★★★★'.slice(0, k) + '☆☆☆☆☆'.slice(0, 5 - k); }
+      function desenha() {
+        var st = painel(), d = st.d, W = 1600, H = 1130;
+        var g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#fffdf5'); g.addColorStop(1, '#f3ead2');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        /* molduras */
+        ctx.strokeStyle = '#163f80'; ctx.lineWidth = 18; ctx.strokeRect(30, 30, W - 60, H - 60);
+        ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 4; ctx.strokeRect(62, 62, W - 124, H - 124);
+        ctx.strokeStyle = 'rgba(201,162,39,.5)'; ctx.lineWidth = 1.5; ctx.strokeRect(76, 76, W - 152, H - 152);
+        /* cantos: átomos estilizados */
+        [[120, 120], [W - 120, 120], [120, H - 120], [W - 120, H - 120]].forEach(function (p) {
+          ctx.save(); ctx.translate(p[0], p[1]); ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 3;
+          for (var k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(0, 0, 38, 13, k * Math.PI / 3, 0, 7); ctx.stroke(); }
+          ctx.fillStyle = '#163f80'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 7); ctx.fill(); ctx.restore();
+        });
+        /* onda decorativa */
+        ctx.strokeStyle = 'rgba(31,95,191,.12)'; ctx.lineWidth = 6; ctx.beginPath();
+        for (var x = 90; x <= W - 90; x += 4) { var y = H - 205 + 14 * Math.sin(x / 40); x === 90 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+        function tx(t, x, y, f, cor, al) { ctx.font = f; ctx.fillStyle = cor || '#1c2333'; ctx.textAlign = al || 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(t, x, y); }
+        tx('E. E. GARIBALDINA FERNANDES VALADARES', W / 2, 155, '600 26px system-ui, Arial', '#5b6578');
+        tx('CERTIFICADO', W / 2, 250, 'bold 92px Georgia, "Times New Roman", serif', '#163f80');
+        tx('Provinha da Massa · Simuladores de Física · ' + serie, W / 2, 300, 'italic 32px Georgia, serif', '#8a6d12');
+        tx('Certificamos que', W / 2, 370, '28px Georgia, serif', '#5b6578');
+        var n = nome.value.trim() || 'Seu nome aqui';
+        var tam = n.length > 34 ? 56 : 72;
+        tx(n, W / 2, 455, 'italic bold ' + tam + 'px Georgia, "Times New Roman", serif', nome.value.trim() ? '#1c2333' : '#b9bfca');
+        ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(380, 478); ctx.lineTo(W - 380, 478); ctx.stroke();
+        tx((/ e |,/.test(n) ? 'concluíram' : 'concluiu') + ' as lições de Física do 3º trimestre de 2026, explorando os simuladores e', W / 2, 525, '26px Georgia, serif', '#3a4150');
+        tx('respondendo corretamente todas as perguntas, com o seguinte desempenho:', W / 2, 560, '26px Georgia, serif', '#3a4150');
+        /* tabela de notas */
+        var x0 = 260, y0 = 600, lh = Math.min(56, 250 / d.length);
+        d.forEach(function (r, i) {
+          var y = y0 + i * lh + lh * 0.7;
+          if (i % 2 === 0) { ctx.fillStyle = 'rgba(22,63,128,.06)'; ctx.fillRect(x0, y0 + i * lh, 780, lh); }
+          tx((i + 1) + '. ' + r.nome, x0 + 18, y, '600 26px system-ui, Arial', '#1c2333', 'left');
+          tx(r.ok ? estrelas(r.nota) : '—', x0 + 560, y, '26px system-ui, Arial', '#c9a227', 'center');
+          tx(r.ok ? nt(r.nota) : 'pendente', x0 + 760, y, 'bold 28px system-ui, Arial', r.ok ? '#163f80' : '#c0392b', 'right');
+        });
+        /* medalha com a média */
+        var feitas = d.filter(function (r) { return r.ok; }), media = feitas.length ? feitas.reduce(function (s, r) { return s + r.nota; }, 0) / feitas.length : 0;
+        var mx = 1250, my = 720;
+        ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(mx - 60, my + 60); ctx.lineTo(mx - 95, my + 190); ctx.lineTo(mx - 55, my + 165); ctx.lineTo(mx - 25, my + 200); ctx.lineTo(mx - 5, my + 80); ctx.fill();
+        ctx.fillStyle = '#1f5fbf'; ctx.beginPath(); ctx.moveTo(mx + 60, my + 60); ctx.lineTo(mx + 95, my + 190); ctx.lineTo(mx + 55, my + 165); ctx.lineTo(mx + 25, my + 200); ctx.lineTo(mx + 5, my + 80); ctx.fill();
+        var gm = ctx.createRadialGradient(mx - 30, my - 30, 10, mx, my, 120); gm.addColorStop(0, '#ffe98a'); gm.addColorStop(1, '#c9a227');
+        ctx.fillStyle = gm; ctx.beginPath();
+        for (var k = 0; k < 48; k++) { var an = k / 48 * Math.PI * 2, rr = k % 2 ? 112 : 124; ctx.lineTo(mx + rr * Math.cos(an), my + rr * Math.sin(an)); }
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#fffdf5'; ctx.beginPath(); ctx.arc(mx, my, 90, 0, 7); ctx.fill();
+        ctx.strokeStyle = '#c9a227'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(mx, my, 82, 0, 7); ctx.stroke();
+        tx('MÉDIA', mx, my - 30, 'bold 22px system-ui, Arial', '#8a6d12');
+        tx(feitas.length ? nt(media) : '—', mx, my + 30, 'bold 62px Georgia, serif', '#163f80');
+        /* data e assinatura */
+        var hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+        tx('Arinos (MG), ' + hoje, 380, H - 150, '24px Georgia, serif', '#3a4150');
+        ctx.strokeStyle = '#3a4150'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(W - 640, H - 175); ctx.lineTo(W - 200, H - 175); ctx.stroke();
+        tx('Prof. João Victor Mariano de Almeida', W - 420, H - 145, 'italic 26px Georgia, serif', '#1c2333');
+        tx('Física · @experimentajoao', W - 420, H - 112, '22px system-ui, Arial', '#5b6578');
+        if (!st.pronto) { ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-0.35); tx('PRÉVIA', 0, 0, 'bold 200px system-ui, Arial', 'rgba(192,57,43,.12)'); ctx.restore(); }
+      }
+      bx.onclick = function () {
+        if (bx.disabled) return;
+        var link = document.createElement('a');
+        link.download = 'Certificado_Fisica_' + serie.replace(/\W+/g, '') + '_' + nome.value.trim().replace(/\s+/g, '_') + '.png';
+        link.href = T.cv.toDataURL('image/png'); document.body.appendChild(link); link.click(); link.remove();
+      };
+      var ult = '';
+      return function () { var k = JSON.stringify(lerProg()); if (k !== ult) { ult = k; desenha(); } };
+    };
+  }
+  return { certificado: certificado, fmt: fmt, sci: sci, el: el, slider: slider, seg: seg, leituras: leituras, formula: formula, dica: dica,
            perguntas: perguntas, tela: tela, seta: seta, texto: texto, pagina: pagina };
 })();
