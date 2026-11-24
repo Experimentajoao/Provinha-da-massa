@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Prova Digital</title>
+<style>
+  :root{--bg:#f4f6fa;--card:#fff;--tx:#1d2433;--mut:#5d6779;--pri:#1f5fbf;--pri2:#174a96;--ok:#1d8a52;--bad:#c0392b;--ln:#d9dee8;--sel:#e6efff}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--tx);font:17px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  .wrap{max-width:640px;margin:0 auto;padding:16px 14px 90px}
+  header{text-align:center;padding:6px 0 12px}
+  header h1{font-size:20px;margin:0}
+  header p{margin:2px 0;color:var(--mut);font-size:14px}
+  .card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:18px;margin-bottom:14px}
+  label{display:block;font-weight:600;margin:12px 0 6px}
+  input,select{width:100%;font-size:17px;padding:12px;border:1.5px solid var(--ln);border-radius:10px;background:#fff;color:var(--tx)}
+  input:focus,select:focus{outline:none;border-color:var(--pri)}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:90px}
+  button{font:inherit;font-weight:600;border:1.5px solid var(--ln);background:#fff;color:var(--tx);padding:12px 14px;border-radius:10px;cursor:pointer}
+  button.on{border-color:var(--pri);background:var(--sel);color:var(--pri2)}
+  button.pri{background:var(--pri);border-color:var(--pri);color:#fff;width:100%;font-size:18px;padding:14px}
+  button.pri:disabled{opacity:.45}
+  .erro{color:var(--bad);font-size:15px;margin-top:10px;min-height:1em}
+  .topo{position:sticky;top:0;background:var(--bg);padding:8px 0 10px;z-index:5}
+  .barra{height:8px;background:var(--ln);border-radius:9px;overflow:hidden}
+  .barra i{display:block;height:100%;background:var(--pri);width:0;transition:width .25s}
+  .info{display:flex;justify-content:space-between;font-size:14px;color:var(--mut);margin-top:6px}
+  .num{font-size:14px;font-weight:700;color:var(--pri)}
+  .enun{font-size:18px;margin:6px 0 14px}
+  .alt{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;margin-bottom:10px;font-weight:400;line-height:1.4}
+  .alt b{flex:0 0 30px;height:30px;border-radius:50%;border:1.5px solid var(--ln);display:flex;align-items:center;justify-content:center;font-size:15px}
+  .alt.on b{background:var(--pri);border-color:var(--pri);color:#fff}
+  .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--ln);padding:10px 14px}
+  .nav div{max-width:640px;margin:0 auto;display:flex;gap:10px}
+  .nav button{flex:1}
+  .grade{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+  .grade button{padding:10px 0}
+  .grade button.resp{background:var(--sel);border-color:var(--pri);color:var(--pri2)}
+  .grade button.atual{outline:3px solid #f0b429}
+  .nota{font-size:64px;font-weight:800;color:var(--pri);text-align:center;margin:6px 0}
+  .centro{text-align:center}
+  .aviso{background:#fff7e0;border:1px solid #f0d58a;border-radius:10px;padding:10px 12px;font-size:15px}
+  .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 16px;border-radius:10px;font-size:15px;z-index:20;display:none;max-width:90%}
+  footer{text-align:center;color:var(--mut);font-size:13px;margin-top:24px}
+  .demo{background:#ffe9e9;color:#8a1f1f;text-align:center;font-size:13px;padding:6px;border-radius:8px;margin-bottom:10px}
+  .esconde{display:none}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="wrap">
+  <div id="demo" class="demo esconde">Modo de visualização do professor: nada é enviado para a planilha.</div>
+  <header>
+    <h1 id="titulo">Prova Digital</h1>
+    <p id="escola"></p>
+  </header>
+
+  <!-- TELA 1: identificação -->
+  <section id="tInicio" class="esconde">
+    <div class="card">
+      <label>Disciplina</label>
+      <div class="seg" id="segDisc"></div>
+      <label>Série</label>
+      <div class="seg" id="segSerie"></div>
+      <label for="turma">Turma</label>
+      <select id="turma"><option value="">Escolha a turma</option></select>
+      <label for="nome">Nome completo</label>
+      <input id="nome" autocomplete="name" placeholder="Ex.: Maria Aparecida Souza">
+      <div id="boxCodigo" class="esconde">
+        <label for="codigo">Código da prova (o professor fala na sala)</label>
+        <input id="codigo" autocapitalize="characters">
+      </div>
+      <div class="erro" id="erroInicio"></div>
+      <button class="pri" id="btComecar" style="margin-top:12px">Começar a prova</button>
+    </div>
+    <div class="aviso">Não saia desta tela durante a prova. Cada vez que você trocar de aplicativo ou de aba, isso fica registrado para o professor.</div>
+  </section>
+
+  <!-- TELA 2: questões -->
+  <section id="tProva" class="esconde">
+    <div class="topo">
+      <div class="barra"><i id="barra"></i></div>
+      <div class="info"><span id="quem"></span><span id="contagem"></span></div>
+    </div>
+    <div class="card">
+      <div class="num" id="numQ"></div>
+      <div class="enun" id="enun"></div>
+      <div id="alts"></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:600">Ir para a questão</div>
+      <div class="grade" id="grade"></div>
+    </div>
+  </section>
+
+  <!-- TELA 3: revisão -->
+  <section id="tRevisao" class="esconde">
+    <div class="card centro">
+      <h2 style="margin-top:0">Enviar a prova?</h2>
+      <p id="txtRevisao"></p>
+      <div class="erro" id="erroEnvio"></div>
+      <button class="pri" id="btEnviar">Sim, enviar agora</button>
+      <button id="btVoltar" style="width:100%;margin-top:10px">Voltar e revisar</button>
+    </div>
+  </section>
+
+  <!-- TELA 4: resultado -->
+  <section id="tFim" class="esconde">
+    <div class="card centro" id="boxFim"></div>
+  </section>
+
+  <section id="tCarregando" class="centro"><p>Carregando...</p></section>
+
+  <footer>Prof. João Victor Mariano de Almeida &nbsp;·&nbsp; @experimentajoao</footer>
+</div>
+
+<div class="nav esconde" id="nav"><div>
+  <button id="btAnt">◀ Anterior</button>
+  <button id="btProx" class="pri" style="width:auto;font-size:17px;padding:12px">Próxima ▶</button>
+</div></div>
+
+<script>
+// Endereço do app da Web do Apps Script (termina em /exec):
+var API_URL = '';
+/* DEMO_INICIO */
+var DEMO = null;
+/* DEMO_FIM */
+
+var LET = ['A','B','C','D','E'];
+var cfg = null, prova = null, ordem = [], altOrdem = {}, resp = {}, atual = 0, saidas = 0, inicio = 0;
+var escolha = {disc: null, serie: null};
+var $ = function(id){ return document.getElementById(id); };
+
+function servidor(fn, args){
+  if (DEMO) return new Promise(function(ok, falha){ try { ok(DEMO[fn].apply(null, args)); } catch(e){ falha(e); } });
+  if (!API_URL) return Promise.reject(new Error('A prova ainda não foi ligada à planilha do professor'));
+  var req;
+  if (fn === 'enviar') req = fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(args[0])});
+  else if (fn === 'getProva') req = fetch(API_URL + '?acao=prova&id=' + encodeURIComponent(args[0]) + '&codigo=' + encodeURIComponent(args[1] || ''));
+  else req = fetch(API_URL + '?acao=config');
+  return req.then(function(r){ return r.json(); }).then(function(d){ if (d && d.erro) throw new Error(d.erro); return d; });
+}
+function msgErro(e){ return (e && e.message ? e.message : String(e)).replace(/^Error:\s*/,''); }
+function guardar(){ try { localStorage.setItem('provaDigital', JSON.stringify({prova:prova.id, nome:$('nome').value, turma:$('turma').value, ordem:ordem, altOrdem:altOrdem, resp:resp, atual:atual, saidas:saidas, inicio:inicio, codigo:$('codigo').value})); } catch(e){} }
+function lerGuardado(){ try { return JSON.parse(localStorage.getItem('provaDigital') || 'null'); } catch(e){ return null; } }
+function limparGuardado(){ try { localStorage.removeItem('provaDigital'); } catch(e){} }
+function toast(t){ var el=$('toast'); el.textContent=t; el.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(function(){ el.style.display='none'; }, 3500); }
+function tela(id){ ['tInicio','tProva','tRevisao','tFim','tCarregando'].forEach(function(t){ $(t).classList.toggle('esconde', t!==id); }); $('nav').classList.toggle('esconde', id!=='tProva'); window.scrollTo(0,0); }
+function embaralhar(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+function provaEscolhida(){
+  if(!cfg) return null;
+  return cfg.provas.filter(function(p){ return p.disciplina===escolha.disc && p.serie===escolha.serie; })[0] || null;
+}
+function montarBotoes(box, valores, chave){
+  box.innerHTML='';
+  valores.forEach(function(v){
+    var b=document.createElement('button'); b.textContent=v; b.type='button';
+    if(escolha[chave]===v) b.classList.add('on');
+    b.onclick=function(){ escolha[chave]=v; atualizarInicio(); };
+    box.appendChild(b);
+  });
+}
+function unicos(lista){ return lista.filter(function(v,i){ return lista.indexOf(v)===i; }); }
+function atualizarInicio(){
+  montarBotoes($('segDisc'), unicos(cfg.provas.map(function(p){return p.disciplina;})), 'disc');
+  var series = unicos(cfg.provas.filter(function(p){ return !escolha.disc || p.disciplina===escolha.disc; }).map(function(p){return p.serie;})).sort();
+  if (escolha.serie && series.indexOf(escolha.serie)<0) escolha.serie=null;
+  montarBotoes($('segSerie'), series, 'serie');
+  var p = provaEscolhida(), sel=$('turma'), antes=sel.value;
+  sel.innerHTML='<option value="">Escolha a turma</option>';
+  (p ? p.turmas : []).forEach(function(t){ var o=document.createElement('option'); o.value=o.textContent=t; sel.appendChild(o); });
+  if (p && p.turmas.indexOf(antes)>=0) sel.value=antes;
+}
+
+function comecar(){
+  var p=provaEscolhida(), nome=$('nome').value.replace(/\s+/g,' ').trim(), turma=$('turma').value, err=$('erroInicio');
+  err.textContent='';
+  if(!p){ err.textContent='Escolha a disciplina e a série.'; return; }
+  if(!turma){ err.textContent='Escolha sua turma.'; return; }
+  if(nome.length<5 || nome.indexOf(' ')<0){ err.textContent='Digite seu nome completo (nome e sobrenome).'; return; }
+  if(!confirm('Confira seus dados:\n\n'+nome+'\n'+p.disciplina+' - '+turma+'\n\nEstá correto?')) return;
+  $('btComecar').disabled=true;
+  servidor('getProva',[p.id, $('codigo').value]).then(function(pr){
+    prova=pr; ordem=embaralhar(pr.questoes.map(function(q){return q.id;}));
+    altOrdem={}; pr.questoes.forEach(function(q){ altOrdem[q.id]=embaralhar(q.a.map(function(a){return a.k;})); });
+    resp={}; atual=0; saidas=0; inicio=Date.now(); guardar(); mostrarQuestao();
+  }).catch(function(e){ err.textContent=msgErro(e); }).then(function(){ $('btComecar').disabled=false; });
+}
+
+function questaoPorId(id){ return prova.questoes.filter(function(q){return q.id===id;})[0]; }
+function mostrarQuestao(){
+  tela('tProva');
+  var q=questaoPorId(ordem[atual]), n=ordem.length, feitas=Object.keys(resp).length;
+  $('quem').textContent=$('nome').value.trim().split(' ')[0]+' · '+prova.disciplina+' '+$('turma').value;
+  $('contagem').textContent=feitas+' de '+n+' respondidas';
+  $('barra').style.width=(feitas/n*100)+'%';
+  $('numQ').textContent='Questão '+(atual+1)+' de '+n;
+  $('enun').textContent=q.e;
+  var box=$('alts'); box.innerHTML='';
+  altOrdem[q.id].forEach(function(k,pos){
+    var a=q.a.filter(function(x){return x.k===k;})[0];
+    var b=document.createElement('button'); b.type='button'; b.className='alt'+(resp[q.id]===k?' on':'');
+    var l=document.createElement('b'); l.textContent=LET[pos];
+    var s=document.createElement('span'); s.textContent=a.t;
+    b.appendChild(l); b.appendChild(s);
+    b.onclick=function(){ resp[q.id]=k; guardar(); mostrarQuestao(); };
+    box.appendChild(b);
+  });
+  var g=$('grade'); g.innerHTML='';
+  ordem.forEach(function(id,i){
+    var b=document.createElement('button'); b.type='button'; b.textContent=i+1;
+    if(resp[id]!==undefined) b.classList.add('resp');
+    if(i===atual) b.classList.add('atual');
+    b.onclick=function(){ atual=i; guardar(); mostrarQuestao(); };
+    g.appendChild(b);
+  });
+  $('btAnt').disabled = atual===0;
+  $('btProx').textContent = atual===n-1 ? 'Finalizar ✓' : 'Próxima ▶';
+}
+
+function revisar(){
+  var faltam=[]; ordem.forEach(function(id,i){ if(resp[id]===undefined) faltam.push(i+1); });
+  $('txtRevisao').textContent = faltam.length
+    ? 'Atenção: você ainda não respondeu as questões '+faltam.join(', ')+'. Questão em branco conta como erro.'
+    : 'Você respondeu todas as '+ordem.length+' questões. Depois de enviar, não dá para mudar.';
+  $('erroEnvio').textContent=''; tela('tRevisao');
+}
+
+function enviarProva(){
+  var bt=$('btEnviar'); bt.disabled=true; bt.textContent='Enviando...';
+  servidor('enviar',[{prova:prova.id, nome:$('nome').value, turma:$('turma').value, respostas:resp, saidas:saidas, inicio:inicio, codigo:$('codigo').value}])
+  .then(function(r){
+    var box=$('boxFim'); box.innerHTML='';
+    if(r.duplicada){
+      box.innerHTML='<h2>Prova já enviada</h2><p>Já existe uma prova enviada com este nome nesta turma. Se isso for um engano, fale com o professor.</p>';
+    } else {
+      var h=document.createElement('h2'); h.textContent='Prova enviada!'; h.style.marginTop='0';
+      var p1=document.createElement('p'); p1.textContent=$('nome').value.trim();
+      var nt=document.createElement('div'); nt.className='nota'; nt.textContent=String(r.nota).replace('.',',');
+      var p2=document.createElement('p'); p2.textContent='Sua nota, de '+r.valor+' pontos. Você acertou '+r.acertos+' de '+r.total+' questões.';
+      var p3=document.createElement('p'); p3.style.color='#5d6779'; p3.textContent='Mostre esta tela ao professor e pode fechar a página.';
+      [h,p1,nt,p2,p3].forEach(function(e){ box.appendChild(e); });
+    }
+    limparGuardado(); prova=null; tela('tFim');
+  }).catch(function(e){
+    $('erroEnvio').textContent='Não foi possível enviar: '+msgErro(e)+'. Suas respostas estão guardadas. Confira a internet e toque em enviar de novo.';
+  }).then(function(){ bt.disabled=false; bt.textContent='Sim, enviar agora'; });
+}
+
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden && prova && !$('tProva').classList.contains('esconde')){ saidas++; guardar(); }
+  else if(!document.hidden && prova && saidas>0){ toast('Saída da tela registrada ('+saidas+').'); }
+});
+
+$('btComecar').onclick=comecar;
+$('btAnt').onclick=function(){ if(atual>0){ atual--; guardar(); mostrarQuestao(); } };
+$('btProx').onclick=function(){ if(atual<ordem.length-1){ atual++; guardar(); mostrarQuestao(); } else revisar(); };
+$('btVoltar').onclick=function(){ mostrarQuestao(); };
+$('btEnviar').onclick=enviarProva;
+
+if(DEMO) $('demo').classList.remove('esconde');
+servidor('getConfig',[]).then(function(c){
+  cfg=c; $('titulo').textContent=c.titulo; $('escola').textContent=c.escola+' · '+c.professor;
+  $('boxCodigo').classList.toggle('esconde', !c.pedeCodigo);
+  atualizarInicio();
+  var g=lerGuardado();
+  if(g && g.prova && confirm('Existe uma prova em andamento neste aparelho ('+g.nome+'). Continuar de onde parou?')){
+    var info=c.provas.filter(function(p){return p.id===g.prova;})[0];
+    if(info){
+      escolha.disc=info.disciplina; escolha.serie=info.serie; atualizarInicio();
+      $('turma').value=g.turma; $('nome').value=g.nome; $('codigo').value=g.codigo||'';
+      return servidor('getProva',[g.prova, g.codigo]).then(function(pr){
+        prova=pr; ordem=g.ordem; altOrdem=g.altOrdem; resp=g.resp; atual=g.atual; saidas=g.saidas; inicio=g.inicio; mostrarQuestao();
+      });
+    }
+  }
+  limparGuardado(); tela('tInicio');
+}).catch(function(e){ tela('tInicio'); $('erroInicio').textContent='Erro ao carregar: '+msgErro(e); });
+</script>
+</body>
+</html>
