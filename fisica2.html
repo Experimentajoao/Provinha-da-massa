@@ -131,7 +131,7 @@ function simMHS(a) {
   var m = P.slider(cx.mola, 'Massa (m)', { min: 0.1, max: 2, step: 0.1, value: 1, unit: 'kg' }, calc);
   var A = P.slider(cx.mola, 'Amplitude (A)', { min: 2, max: 20, step: 1, value: 15, unit: 'cm' }, calc);
   P.formula(cx.pend, '<b>T = 2π √(L / g)</b> &nbsp; g = 10 m/s²');
-  var Lp = P.slider(cx.pend, 'Comprimento do fio (L)', { min: 0.1, max: 2.5, step: 0.1, value: 1, unit: 'm' }, calc);
+  var Lp = P.slider(cx.pend, 'Comprimento do fio (L)', { min: 0.1, max: 2.5, step: 0.05, value: 1, unit: 'm' }, calc);
   var bcr = P.el('button', 'bt', '⏱ Contar oscilações em 10 s'); cx.pend.appendChild(bcr);
   P.formula(cx.onda, '<b>v = λ · f</b> &nbsp; T = 1 / f');
   var fo = P.slider(cx.onda, 'Frequência da mão (f)', { min: 0.5, max: 4, step: 0.5, value: 2, unit: 'Hz' }, calc);
