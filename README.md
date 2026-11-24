@@ -1,11 +1,16 @@
 # Provinha da Massa
 
-Prova digital da Avaliação Final do 3º Trimestre 2026 (Física e Química, 1º ao 3º ano).
+Plataforma de simuladores de Física para a Avaliação Final do 3º Trimestre 2026
+(1º, 2º e 3º ano do Ensino Médio), baseada nos Planos de Curso da SEE/MG.
 Prof. João Victor Mariano de Almeida · @experimentajoao
 
-O aluno abre o site no celular, escolhe disciplina, série e turma, digita o nome e responde.
-As questões e o gabarito ficam no Apps Script do professor (fora deste repositório, que é público).
-A correção é feita lá, e as notas caem numa planilha Google, com uma aba por turma.
+Os alunos, em dupla, exploram os simuladores, respondem as perguntas rápidas de cada um
+e usam os valores observados para resolver a avaliação escrita impressa.
 
-Para ligar o site à planilha, coloque o endereço do app da Web (termina em `/exec`)
-na linha `var API_URL = '';` do `index.html`.
+- `index.html`: página inicial com as três séries
+- `fisica1.html`: impulso e colisões, pressão e Torricelli, Stevin, Pascal, empuxo
+- `fisica2.html`: olho e lentes, MHS e ondas, fenômenos ondulatórios, luz e cores, som e Doppler
+- `fisica3.html`: transformador e gerador, energia elétrica, espectro eletromagnético, física moderna
+- `plataforma.js` e `estilo.css`: componentes comuns
+
+Funciona no celular e no computador, sem login e sem internet depois de carregada.
