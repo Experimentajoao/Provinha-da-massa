@@ -59,3 +59,12 @@ footer{text-align:center;color:var(--mut);font-size:13px;padding:20px 10px 30px}
   .sim .grid>div:first-child .card{padding:6px}
   .topo h1{font-size:15px}
 }
+.perg .q button.marcado{border-color:var(--pri);background:var(--sel);color:var(--pri2);font-weight:600}
+.perg .q.qerro{border-left:4px solid var(--bad);padding-left:10px;background:var(--badbg);border-radius:8px}
+.perg .bt:disabled{opacity:.5;cursor:default}
+.resultado{font-weight:600;margin-top:8px;padding:10px;border-radius:10px;display:none}
+.resultado.ruim{display:block;background:var(--badbg);color:var(--bad)}
+.resultado.bom{display:block;background:var(--okbg);color:var(--ok)}
+.kahoot{background:#46178f;color:#fff;border-radius:16px;padding:18px;margin-top:18px}
+.kahoot h2{margin:0 0 6px}
+.kahoot a.bt{background:#fff;color:#46178f;text-decoration:none;display:inline-block}

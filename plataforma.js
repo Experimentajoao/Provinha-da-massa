@@ -53,25 +53,44 @@ var P = (function () {
   }
   function formula(pai, html) { var f = el('div', 'formula'); f.innerHTML = html; pai.appendChild(f); return f; }
   function dica(pai, t) { var d = el('p', 'dica', t); pai.appendChild(d); return d; }
+  /* Perguntas: o aluno marca tudo, confere no final; só vê as explicações quando acertar todas */
   function perguntas(pai, lista) {
     var box = el('div', 'card perg'); box.appendChild(el('h3', '', 'Perguntas rápidas'));
-    lista.forEach(function (q) {
-      var d = el('div', 'q'); d.appendChild(el('p', '', q.p));
+    box.appendChild(el('p', 'dica', 'Responda todas e depois toque em Conferir. Se errar alguma, volte ao simulador, teste de novo e corrija.'));
+    var marc = [], blocos = [], fbs = [];
+    lista.forEach(function (q, qi) {
+      var d = el('div', 'q'); d.appendChild(el('p', '', (qi + 1) + '. ' + q.p));
       var fb = el('div', 'fb');
       q.a.forEach(function (alt, i) {
         var bt = el('button', '', alt); bt.type = 'button';
         bt.onclick = function () {
-          d.querySelectorAll('button').forEach(function (x) { x.classList.remove('certo', 'errado'); });
-          var ok = i === q.c;
-          bt.classList.add(ok ? 'certo' : 'errado');
-          fb.textContent = (ok ? 'Isso! ' : 'Ainda não. ') + (ok ? q.e : 'Use o simulador para testar e tente de novo.');
-          fb.style.color = ok ? 'var(--ok)' : 'var(--bad)';
-          fb.classList.add('mostra');
+          if (box.classList.contains('feito')) return;
+          d.querySelectorAll('button').forEach(function (x) { x.classList.remove('marcado'); });
+          bt.classList.add('marcado'); marc[qi] = i; d.classList.remove('qerro');
+          res.textContent = ''; atualiza();
         };
         d.appendChild(bt);
       });
-      d.appendChild(fb); box.appendChild(d);
+      d.appendChild(fb); box.appendChild(d); blocos.push(d); fbs.push(fb);
     });
+    var conf = el('button', 'bt', 'Conferir respostas'); conf.type = 'button';
+    var res = el('div', 'resultado');
+    box.appendChild(conf); box.appendChild(res);
+    function atualiza() { var n = lista.filter(function (q, i) { return marc[i] !== undefined; }).length; conf.disabled = n < lista.length; conf.textContent = n < lista.length ? 'Conferir respostas (' + n + ' de ' + lista.length + ' marcadas)' : 'Conferir respostas'; }
+    conf.onclick = function () {
+      var erros = 0;
+      lista.forEach(function (q, i) { var ok = marc[i] === q.c; blocos[i].classList.toggle('qerro', !ok); if (!ok) erros++; });
+      if (erros) {
+        res.className = 'resultado ruim';
+        res.textContent = 'Você acertou ' + (lista.length - erros) + ' de ' + lista.length + '. As perguntas marcadas em vermelho estão erradas: volte ao simulador, teste e responda de novo.';
+      } else {
+        res.className = 'resultado bom';
+        res.textContent = 'Parabéns! Todas certas. Veja as explicações abaixo de cada pergunta.';
+        box.classList.add('feito'); conf.style.display = 'none';
+        lista.forEach(function (q, i) { blocos[i].querySelectorAll('button')[q.c].classList.add('certo'); fbs[i].textContent = q.e; fbs[i].style.color = 'var(--ok)'; fbs[i].classList.add('mostra'); });
+      }
+    };
+    atualiza();
     pai.appendChild(box);
   }
   /* Canvas com coordenadas lógicas fixas (L x A), ajustado à largura da tela */
